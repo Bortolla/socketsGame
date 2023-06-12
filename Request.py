@@ -1,4 +1,10 @@
 # Classe Request para manipular as requisicoes feitas ao servidor pelos clientes
+
+# requestCode:
+# 100 - criar uma nova sala
+# 101 - entrar em uma sala
+# 102 - 
+
 class Request:
     def __init__(self, requestCode=None, address=None, token=None, requestData=None) -> None:
         self.requestCode = requestCode # Codigo que representa a ação que o cliente deseja realizar 

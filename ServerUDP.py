@@ -64,15 +64,15 @@ class ServerUDP:
         elif userAddress in users:
             return False
 
-        # eh adicionado o usuario a sala
+        # o usuario eh inserido, caso a sala nao esteja cheia e ele ainda nao esteja na sala
         else:
             if len(users) == 0:
-                x = 190
+                x = 190 # primeiro a entrar inicia com a posicao 190
             elif len(users) == 1:
-                x = 400
+                x = 400 # segundo a entrar inicia com a posicao 400
             else:
-                x = 610
-            users[userAddress] = Player(playerId=userAddress, x=x)
+                x = 610 # terceiro a entrar inicia com a posicao 610
+            users[userAddress] = Player(playerId=userAddress, x=x) # o usuario eh adicionado no vetor de usuarios
 
             return users
 
@@ -105,17 +105,18 @@ class ServerUDP:
     def handleRequest(self, request):
         # User is creating a new room
         if request.getRequestCode() == 100:
-            newRoomToken = self.createNewRoom()
+            newRoomToken = self.createNewRoom() # token da sala criada
 
-            response = Response(responseCode=201, token=newRoomToken)
+            response = Response(responseCode=201, token=newRoomToken) # resposta com codigo de sucesso e token
             self.sendResponse(response, request.getAddress())
         
         # User is joining a room
         elif request.getRequestCode() == 101:
-            token = request.getToken()
-            usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress())
+            token = request.getToken() # token da sala passada na requisicao
+            usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress()) 
 
-            if not usersInRoom:
+            # caso o usuario nao tenha sido inserido na sala, eh retornada uma resposta de bad request
+            if not usersInRoom: 
                 response = Response(responseCode=400)
                 self.sendResponse(response, request.getAddress())
             else:
