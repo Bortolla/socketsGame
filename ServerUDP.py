@@ -1,43 +1,47 @@
 import socket
 import threading
-import secrets
-import json
+import secrets # biblioteca para criar um token único para as salas
+import json    # biblioteca para codificar e decodificar objetos do tipo JSON
 from   Request  import *
 from   Response import *
 from   Player   import *
 
+# Classe para manipular um socket com uma instancia de conexao do tipo UDP
 class ServerUDP:
     def __init__(self) -> None:
-        self.localIP         = "127.0.0.1"
-        self.localPort       = 20001
-        self.bufferSize      = 1024
-        self.allRooms        = {}
-        self.ongoingMatches  = {}
-        self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.localIP         = "127.0.0.1" 
+        self.localPort       = 20001 
+        self.bufferSize      = 1024 # tamanho dos dados enviados em bytes
+        self.allRooms        = {}   # Todas as salas criadas no jogo, ativas ou nao ativass
+        self.ongoingMatches  = {}   # dicionario com todas as salas em que as partidas estao ativas
+        self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) # criando uma conexao UDP
         self.UDPServerSocket.bind((self.localIP, self.localPort))
 
     def getRequest(self):
         try:
-            # Reveives a new UDP connection
+            # Recebe o pacote do cliente juntamente com seu endereço
             bytesAddressPair = self.UDPServerSocket.recvfrom(self.bufferSize)
-            clientMessageArray = json.loads(bytesAddressPair[0])
-            clientMessageArray['address'] =  bytesAddressPair[1]
+            clientMessageArray = json.loads(bytesAddressPair[0]) # Transforma JSON em dicionario Python
+            clientMessageArray['address'] =  bytesAddressPair[1] 
 
+            # Retorna uma instancia da classe Request passando como parametro os dados do cliente
             request = Request()
-
             return request.createRequestFromArray(clientMessageArray)
         
         except:
             return False
         
     def sendResponse(self, response, address):
-        # Sending response back
-        bytesToSend = str.encode(json.dumps(response.getResponseAsArray()))
+        # Transforma o dicionario de resposta em um JSON, e entao transforma o JSON em uma string
+        bytesToSend = str.encode(json.dumps(response.getResponseAsArray())) 
+        # a resposta eh enviada para o cliente no seu respectivo endereco
         self.UDPServerSocket.sendto(bytesToSend, address)
 
     def createNewRoom(self):
+        # um token de tamanho de 16 bytes eh gerado aleatoriamente
         token = secrets.token_hex(nbytes=16)
 
+        # eh adicionada uma sala ao vetor allRooms com o token gerado
         self.allRooms[token] = {'users': {},
                                 'winners': []
                                }
@@ -45,16 +49,22 @@ class ServerUDP:
         return token
     
     def addUserToRoom(self, token, userAddress):
+        # caso a sala nao exista
         if not (token in self.allRooms):
             return False
         
         room = self.allRooms[token]
         users = room['users']
 
+        # se a sala tiver 3 ou mais participantes, ninguem mais pode entrar
         if len(users) >= 3:
             return False
+        
+        # se o usuario ja estiver na sala, ele nao pode entrar novamente
         elif userAddress in users:
             return False
+
+        # eh adicionado o usuario a sala
         else:
             if len(users) == 0:
                 x = 190
@@ -66,27 +76,30 @@ class ServerUDP:
 
             return users
 
+    # retorna todos os usuarios da sala com base no seu token
     def getRoomUsers(self, token):
         if token in self.allRooms:
             return self.allRooms[token]['users']
         
         return False
     
+    # retorna o vencedor da sala com base no seu token
     def getRoomWinners(self, token):
         if token in self.allRooms:
             return self.allRooms[token]['winners']
         
         return False
-                    
 
+    # Inicia o servidor UDP                 
     def startUDPServer(self):
         print('UDP server is running')
+        
+        # fica ouvindo por conexoes
         while True:
-
-            # Reveives a new UDP connection
             request = self.getRequest()
-            # Starts thread to handle the connection
-            newThread = threading.Thread(target=self.handleRequest, args=(request,))
+
+            # Inicia nova thread e passa o handler da instancia da classe Request para manipular a nova conexao
+            newThread = threading.Thread(target=self.handleRequest, args=(request,))  
             newThread.start()
             
     def handleRequest(self, request):
