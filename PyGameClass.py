@@ -30,8 +30,9 @@ class PyGameClass:
         return pygame.event.get()
 
     def playerPressedA(self):
-        return pygame.key.get_pressed()[K_a]
+        return pygame.key.get_pressed()[K_a] # esta correta esta sintaxe?
     
+    # trocar o jogador de mapa conforme sua posicao
     def setBackgroundImageForThisPlayer(self, thisPlayer):
         if thisPlayer.getMap() == 0:
             background_image = pygame.image.load('images/beach.png') 

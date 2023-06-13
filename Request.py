@@ -3,7 +3,7 @@
 # requestCode:
 # 100 - criar uma nova sala
 # 101 - entrar em uma sala
-# 102 - 
+# 102 - usuario ja esta em uma sala
 
 class Request:
     def __init__(self, requestCode=None, address=None, token=None, requestData=None) -> None:
@@ -24,7 +24,7 @@ class Request:
     def getRequestData(self):
         return self.requestData
     
-    # Método cria uma instância da classe Request com os dados do cliente enviados ao servidor
+    # Método retorna uma instância da classe Request com os dados do cliente enviados ao servidor
     def createRequestFromArray(self, array):
         if 'requestCode' in array:
             requestCode = array['requestCode']
@@ -42,10 +42,10 @@ class Request:
             address = array['address']
         else:
             address = None
-        
-        # Retorna a instancia da classe
+         
         return Request(requestCode=requestCode, address=address, token=token, requestData=requestData)
 
+    # retorna informacoes da requisicao em forma de dicionario
     def getRequestAsArray(self):
         returnData = {
             'requestCode': self.requestCode,

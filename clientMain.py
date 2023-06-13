@@ -1,10 +1,10 @@
-from   ClientUDP     import *
-from   Player        import *
-from   pygame.locals import *
-from   PyGameClass   import *
-from   sys           import exit
-import pygame
-import threading
+from   ClientUDP     import *       # classe ClientUDP
+from   Player        import *       # classe Player
+from   pygame.locals import *       # Constantes da biblioteca Pygame
+from   PyGameClass   import *       # Classe para fazer manipulacoes usando o PyGame
+from   sys           import exit    # Importar funcao exit do sistema operacional
+import pygame                       # Biblioteca PyGame em si
+import threading                    
 
 ClientUDPClass = ClientUDP()
 
@@ -87,7 +87,7 @@ while stop != True:
                         # Getting the action of the player and sending to the server
                         requestData = {}
                         for event in pyGameObject.getEvents():
-                            if event.type == QUIT:
+                            if event.type == pygame.QUIT:
                                 pygame.quit()
                                 exit() 
                             elif pyGameObject.playerPressedA():
