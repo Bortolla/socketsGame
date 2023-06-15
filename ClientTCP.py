@@ -1,8 +1,8 @@
 import socket
 import threading
 
-HOST = '192.168.0.6'
-PORT = 55556
+HOST = "127.0.0.1"
+PORT = 20001
 bufferSize = 1024 # tamanho das mensagens em Bytes
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
