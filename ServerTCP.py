@@ -17,14 +17,14 @@ class ServerTCP:
         self.TCPServerSocket.listen()
 
     # enviando a mensagem para todos os clientes
-    def broadcast(self, message):
+    def broadcast(self, message) -> None:
         try:
             for client in self.clients:
                 client.send(message)
         except:
             print('Houve um erro no método broadcast ServerTCP')
 
-    def handle(self, client):
+    def handle(self, client) -> None:
         while True:
             # fica ouvindo por mensagens enviadas ao servidor, e repassa ela para todos os clientes
             try:
@@ -44,7 +44,7 @@ class ServerTCP:
 
                 break
 
-    def receive(self):
+    def receive(self) -> None:
         while True:
             client, address = self.TCPServerSocket.accept() # se o cliente conseguiu se conectar, pega os dados dele
             print(f'{client} conectou com o endereço {str(address)}')

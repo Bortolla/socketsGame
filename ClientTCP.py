@@ -1,39 +1,44 @@
 import socket
 import threading
 
-HOST = "127.0.0.1"
-PORT = 20001
-bufferSize = 1024 # tamanho das mensagens em Bytes
+class ClientTCP:
+    def __init__(self) -> None:
+        self.localIP = "127.0.0.1"
+        self.localPort = 20001
+        self.bufferSize = 1024 
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((HOST, PORT))
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect((self.localIP, self.localPort))
 
-nickname = input('Escolha uma nickname (apelido) na partida: ')
+        self.nickname = input('Escolha um nickname (apelido) na partida: ')
 
-def receive():
-    while True:
-        try:
-            message = client.recv(bufferSize).decode('ascii')
+    def receive(self) -> None:
+        while True:
+            try:
+                message = self.client.recv(self.bufferSize).decode('ascii')
 
-            # cliente esta enviando o seu nickname (apelido) na partida
-            if (message == '_NICK'):
-                client.send(nickname.encode('ascii'))
+                # cliente esta enviando o seu nickname (apelido) na partida
+                if (message == '_NICK'):
+                    self.client.send(self.nickname.encode('ascii'))
 
-            else:
-                print(message)
+                else:
+                    print(message)
 
-        except: 
-            print('Erro na função receive ClientTCP')
-            client.close() # fecha conexao TCP
-            break
+            except: 
+                print('Erro na função receive ClientTCP')
+                self.client.close() # fecha conexao TCP
+                break
 
-def write():
-    while True:
-        message = f'{nickname}: {input("")}'
-        client.send(message.encode('ascii')) # envia a mensagem para o servidor
+    def write(self):
+        while True:
+            message = f'{self.nickname}: {input("")}'
+            self.client.send(message.encode('ascii')) # envia a mensagem para o servidor
 
-receive_thread = threading.Thread(target=receive)
+
+client = ClientTCP()
+
+receive_thread = threading.Thread(target=client.receive)
 receive_thread.start()
 
-write_thread = threading.Thread(target=write)
+write_thread = threading.Thread(target=client.write)
 write_thread.start()
