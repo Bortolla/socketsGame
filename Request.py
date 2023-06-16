@@ -1,17 +1,17 @@
-# Classe Request para manipular as requisicoes feitas ao servidor pelos clientes
-
-# requestCode:
-# 100 - criar uma nova sala
-# 101 - entrar em uma sala
-# 102 - usuario ja esta em uma sala
-
 class Request:
-    def __init__(self, requestCode=None, address=None, token=None, requestData=None) -> None:
-        self.requestCode = requestCode # Codigo que representa a ação que o cliente deseja realizar 
-        self.token = token # string que representa o ID de uma sala
-        self.address = address # endereço do cliente que está fazendo a requisição
-        self.requestData = requestData # dados enviados juntamente com a requisição
+    def __init__(self, requestCode=None, address=None, connection=None, token=None, tokenAddress=None, requestData=None) -> None:
+        self.requestCode = requestCode
+
+        self.token = token
+        self.address = address
+        self.tokenAddress = tokenAddress
+
+        self.connection = connection
+        self.requestData = requestData
     
+    def getTokenAddress(self):
+        return self.tokenAddress
+
     def getRequestCode(self):
         return self.requestCode
     
@@ -23,33 +23,50 @@ class Request:
     
     def getRequestData(self):
         return self.requestData
-    
-    # Método retorna uma instância da classe Request com os dados do cliente enviados ao servidor
+
+    def getConnection(self):
+        return self.connection
+
     def createRequestFromArray(self, array):
         if 'requestCode' in array:
             requestCode = array['requestCode']
         else:
             requestCode = None
+
         if 'token' in array:
             token = array['token']
         else:
             token = None
+        
         if 'requestData' in array:
             requestData = array['requestData']
         else:
             requestData = None
+        
         if 'address' in array:
             address = array['address']
         else:
             address = None
-         
-        return Request(requestCode=requestCode, address=address, token=token, requestData=requestData)
+        
+        if 'connection' in array:
+            connection = array['connection']
+        else:
+            connection = None
 
-    # retorna informacoes da requisicao em forma de dicionario
+        if 'tokenAddress' in array:
+            tokenAddress = array['tokenAddress']
+        else:
+            tokenAddress = None
+        
+        return Request(requestCode=requestCode, address=address, connection=connection, token=token, tokenAddress=tokenAddress, requestData=requestData)
+
     def getRequestAsArray(self):
         returnData = {
             'requestCode': self.requestCode,
+            'address': self.address,
             'token': self.token,
+            'tokenAddress': self.tokenAddress,
+            'connection': self.connection,
             'requestData': self.requestData
         }
 

@@ -1,64 +1,96 @@
 import socket
-import json                     # biblioteca para manipular dados no formato JSON
-import queue                    # estrutura de dados fila
-from   Request       import *   # classe Request
-from   Response      import *   # classe Response
-from   pygame.locals import *   # constantes da biblioteca pygame
+import json
+import queue
+from   Request       import *
+from   Response      import *
+from   pygame.locals import *
 
 class ClientUDP:
     def __init__(self) -> None:
-        self.serverAddressPort = ('127.0.0.1', 20001) # endereco e porta do cliente
-        self.bufferSize        = 1024 # tamanho max do buffer (dados a serem enviados)
-        self.UDPClientSocket   = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)   # instancia UDP do socket para redes
-        self.currentRoom       = None   # cliente inicia sem sala
-        self.sharedQueue       = queue.Queue()  # fila dos clientes (jogadores)
+        self.udpAddressPort = ('127.0.0.1', 20005)
+        self.tcpAddressPort = ('127.0.0.1', 20005)
 
-    # Envia requisicao para o servidor com os dados do cliente 
-    def sendRequest(self, request):
+        self.bufferSize        = 1024
+
+        self.UDPClientSocket   = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
+        self.TCPClientSocket   = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.TCPClientSocket.connect(self.tcpAddressPort)
+
+        self.currentRoom       = None
+        self.sharedQueue       = queue.Queue()
+
+        self.addressToken      = None
+
+    def getAddressAndPort(self):
+        # host, port
+        return self.TCPClientSocket.getpeername()
+
+    def sendRequestWithTCP(self, request):
+        request.setAddressToken(self.addressToken)
+
         bytesToSend = str.encode(json.dumps(request.getRequestAsArray()))
-        self.UDPClientSocket.sendto(bytesToSend, self.serverAddressPort)
+        self.TCPClientSocket.sendall(bytesToSend)
     
-    # Pega a resposta do servidor
-    def getResponse(self):
+    def sendRequestWithUDP(self, request):
+        request.setAddressToken(self.addressToken)
+        
+        bytesToSend = str.encode(json.dumps(request.getRequestAsArray()))
+        self.UDPClientSocket.sendto(bytesToSend, self.udpAddressPort)
+    
+    def getTCPResponse(self):
         try:
-            # Pega a mensagem do servidor com tamanho max de 1024
+            serverMessage = self.TCPClientSocket.recv(self.bufferSize)
+            serverMessage = json.loads(serverMessage)
+            response = Response()
+
+            return response.createResponseFromArray(serverMessage)
+        except:
+            return False
+    
+    def getUDPReponse(self):
+        try:
+            # Waiting for response
             bytesAddressPair = self.UDPClientSocket.recvfrom(self.bufferSize)
-            # pega somente a mensagem do servidor
-            serverMessageArray = json.loads(bytesAddressPair[0]) 
+            serverMessageArray = json.loads(bytesAddressPair[0])
 
-            response = Response() 
+            response = Response()
 
-            # retorna um dicionario a partir da resposta recebida
             return response.createResponseFromArray(serverMessageArray)
         except:
-            return False # se nao retorna False, isto eh, algum erro ocorreu
+            return False
     
-    # Ficar pegando todas as respostas que o servidor enviou
     def getResponses(self):
         while True:
-            response = self.getResponse()
-            
-            # Se houver uma resposta, colocar ela na fila de respostas
+            response = self.getUDPReponse()
+            # Append response to the shared queue
             if response:                   
                 self.sharedQueue.put(response)
 
     def getQueue(self):
         return self.sharedQueue
-
-    # realiza uma requisicao com o codigo do tipo 100 (criar sala)    
+        
     def createRoom(self):
+        # Sending message to create room
         request = Request(requestCode=100)
-        self.sendRequest(request)
+        self.sendRequestWithTCP(request)
 
-        # Retorna a resposta do servidor (objeto do tipo Response)
-        return self.getResponse()
+        # Waiting for response
+        return self.getTCPResponse()
+    
+    def listRooms(self):
+        request = Request(requestCode=103, token=self.currentRoom)
+        self.sendRequestWithTCP(request=request)
 
-    # Requisitar para entrar em uma sala a partir do token
+        # Waiting for response
+        return self.getTCPResponse()
+
     def joinRoom(self, roomToken):
         self.currentRoom = roomToken
 
+        # Sending message to join a room
         request = Request(requestCode=101, token=self.currentRoom)
-        self.sendRequest(request=request)
+        self.sendRequestWithTCP(request=request)
 
-        # Retorna objeto do tipo Response (resposta do servidor)
-        return self.getResponse()
+        # Waiting for response
+        return self.getTCPResponse()

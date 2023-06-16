@@ -1,19 +1,19 @@
-from   ClientUDP     import *       # classe ClientUDP
-from   Player        import *       # classe Player
-from   pygame.locals import *       # Constantes da biblioteca Pygame
-from   PyGameClass   import *       # Classe para fazer manipulacoes usando o PyGame
-from   sys           import exit    # Importar funcao exit do sistema operacional
-import pygame                       # Biblioteca PyGame em si
-import threading                    
+from   ClientUDP     import *
+from   Player        import *
+from   pygame.locals import *
+from   PyGameClass   import *
+from   sys           import exit
+import pygame
+import threading
 
 ClientUDPClass = ClientUDP()
 
 stop = False
 while stop != True:
-    print('MENU: 1. Criar sala 2. Entrar em uma sala')
+    print('MENU: 1. Criar sala 2. Listar salas 3. Entrar em uma sala')
     action = str(input('-> ')).strip()
 
-    if not action in ['1', '2', '1.', '2.']:
+    if not action in ['1', '2', '3', '1.', '2.', '3.']:
         print('Comando invalido')
     elif action in ['1', '1.']:
         response = ClientUDPClass.createRoom()
@@ -22,8 +22,23 @@ while stop != True:
             print('Erro ao criar sala. Tente novamente')
         elif response.getResponseCode() == 201:
             print('Sala criada. Chave de acesso: {}'.format(response.getToken()))
+        
 
     elif action in ['2', '2.']:
+        response = ClientUDPClass.listRooms()
+
+        if not response or response.getResponseCode() != 200:
+            print('Erro ao listar salas. Tente novamente')
+        elif response.getResponseCode() == 200:
+            roomsList = response.getReturnData()
+
+            if len(roomsList) < 1:
+                print('Nao ha salas disponiveis')
+            else:
+                for i in range(0, len(roomsList)):
+                    print('Sala {}: {}'.format(i + 1, roomsList[i]))
+
+    elif action in ['3', '3.']:
         roomToken = str(input('Informe o token da sala: ')).strip()
         response = ClientUDPClass.joinRoom(roomToken=roomToken)
 
@@ -37,14 +52,14 @@ while stop != True:
 
             print('Voce entrou na sala. Aguardando usuarios.')
             while True:
-                response = ClientUDPClass.getResponse()
+                response = ClientUDPClass.getTCPResponse()
 
                 if not response:
                     pass
 
                 # Waiting for users to join
                 elif response.getResponseCode() == 202:
-                    print(response.getReturnData())
+                    print(response.getReturnData()['message'])
 
                 # Match is ready
                 elif response.getResponseCode() == 203:
@@ -87,23 +102,27 @@ while stop != True:
                         # Getting the action of the player and sending to the server
                         requestData = {}
                         for event in pyGameObject.getEvents():
-                            if event.type == pygame.QUIT:
+                            if event.type == QUIT:
                                 pygame.quit()
-                                exit() 
-                            elif pyGameObject.playerPressedA():
+                                exit()
+
+                            elif event.type == KEYDOWN and event.key == K_a:
                                 requestData['pressedKey'] = 'a'
                                 request = Request(
                                     requestCode=102, 
                                     token=ClientUDPClass.currentRoom, 
                                     requestData=requestData
                                 )
-                                ClientUDPClass.sendRequest(request=request)
+                                ClientUDPClass.sendRequestWithUDP(request=request)
 
                         # Checking for data from the server
                         if not ClientUDPClass.getQueue().empty():
+                            print('revebeu')
 
                             # Getting the next response from server
                             response = ClientUDPClass.getQueue().get()
+                            print(response)
+                            print(response.getReturnData())
                             
                             # Code 206: player just got to the finish line
                             if response.getResponseCode() == 206:

@@ -1,8 +1,8 @@
 class Response:
     def __init__(self, responseCode=None, token=None, returnData=None) -> None:
-        self.responseCode = responseCode # codigo da resposta
-        self.token = token # token da sala
-        self.returnData = returnData # dados da resposta
+        self.responseCode = responseCode
+        self.token = token
+        self.returnData = returnData
 
     def getResponseCode(self):
         return self.responseCode
@@ -13,7 +13,6 @@ class Response:
     def getReturnData(self):
         return self.returnData
 
-    # Retorna resposta em formato de dicionario
     def getResponseAsArray(self):
         returnData = {
             'responseCode': self.responseCode,
@@ -23,7 +22,6 @@ class Response:
 
         return returnData
 
-    # Retorna um objeto do tipo Response 
     def createResponseFromArray(self, array):
         if 'responseCode' in array:
             responseCode = array['responseCode']

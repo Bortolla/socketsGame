@@ -1,173 +1,227 @@
 import socket
 import threading
-import secrets # biblioteca para criar um token único para as salas
-import json    # biblioteca para codificar e decodificar objetos do tipo JSON
-from   Request  import * # classe para manipular as requisicoes dos jogadores 
-from   Response import * # classe para manipular as respostas do servidor
-from   Player   import * # classe para manipular os jogadores
+import secrets
+import json
+from   Request  import *
+from   Response import *
+from   Player   import *
 
-# Classe para manipular um socket com uma instancia de conexao do tipo UDP
 class ServerUDP:
     def __init__(self) -> None:
-        self.localIP         = "127.0.0.1" 
-        self.localPort       = 20001 
-        self.bufferSize      = 1024 # tamanho dos dados enviados em bytes
-        self.allRooms        = {}   # Todas as salas criadas no jogo, ativas ou nao ativass
-        self.ongoingMatches  = {}   # dicionario com todas as salas em que as partidas estao ativas
-        self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) # criando uma conexao UDP
-        self.UDPServerSocket.bind((self.localIP, self.localPort))
+        self.udpAddressPort    = ('127.0.0.1', 20005)
+        self.tcpAddressPort = ('127.0.0.1', 20005)
 
-    def getRequest(self):
-        try:
-            # Recebe o pacote do cliente juntamente com seu endereço
-            bytesAddressPair = self.UDPServerSocket.recvfrom(self.bufferSize)
-            clientMessageArray = json.loads(bytesAddressPair[0]) # Transforma JSON em dicionario Python
-            clientMessageArray['address'] =  bytesAddressPair[1] 
+        self.bufferSize      = 1024
 
-            # Retorna uma instancia da classe Request passando como parametro os dados do cliente
-            request = Request()
-            return request.createRequestFromArray(clientMessageArray)
+        self.allRooms        = {}
+
+        self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.UDPServerSocket.bind(self.udpAddressPort)
+
+        self.TCPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.TCPServerSocket.bind(self.tcpAddressPort)
+        self.TCPServerSocket.listen()
+
+        self.TCPconnections = []
         
+    def getUDPRequest(self):
+        try:
+            # Reveives a new UDP connection
+            bytesAddressPair = self.UDPServerSocket.recvfrom(self.bufferSize)
+            clientMessageArray = json.loads(bytesAddressPair[0])
+            clientMessageArray['address'] =  bytesAddressPair[1]
+
+            request = Request()
+
+            return request.createRequestFromArray(clientMessageArray)
         except:
             return False
         
-    def sendResponse(self, response, address):
-        # Transforma o dicionario de resposta em um JSON, e entao transforma o JSON em uma string
-        bytesToSend = str.encode(json.dumps(response.getResponseAsArray())) 
-        # a resposta eh enviada para o cliente no seu respectivo endereco
+    def getTCPRequest(self):
+        try:
+            conn, addr = self.TCPServerSocket.accept()
+            clientMessageArray = json.loads(conn.recv(self.bufferSize))
+            clientMessageArray['address'] =  addr
+            clientMessageArray['connection'] = conn
+
+            request = Request()
+
+            return request.createRequestFromArray(clientMessageArray)
+        except:
+            return False
+
+    def sendReponseWithUDP(self, response, address):
+        bytesToSend = str.encode(json.dumps(response.getResponseAsArray()))
         self.UDPServerSocket.sendto(bytesToSend, address)
 
+    def sendReponseWithTCP(self, response, connection):
+        bytesToSend = str.encode(json.dumps(response.getResponseAsArray()))
+        connection.sendall(bytesToSend)
+
+    def getConnectionData(self, request):
+        clientMessageArray = json.loads(request.getConnection().recv(self.bufferSize))
+
+        if 'token' in clientMessageArray:
+            token = clientMessageArray['token']
+        else:
+            token = request.getToken()
+        if 'requestCode' in clientMessageArray:
+            requestCode = clientMessageArray['requestCode']
+        else:
+            requestCode = None
+        if 'requestData' in clientMessageArray:
+            requestData = clientMessageArray['requestData']
+        else:
+            requestData = None
+
+        newRequest = Request(requestCode=requestCode, address=request.getAddress(), connection=request.getConnection(), token=token, requestData=requestData)
+
+        return newRequest
+
     def createNewRoom(self):
-        # um token de tamanho de 16 bytes eh gerado aleatoriamente
         token = secrets.token_hex(nbytes=16)
 
-        # eh adicionada uma sala ao vetor allRooms com o token gerado
         self.allRooms[token] = {'users': {},
                                 'winners': []
                                }
 
         return token
     
-    def addUserToRoom(self, token, userAddress):
-        # caso a sala nao exista
+    def addUserToRoom(self, token, userAddress, playerConnection):
         if not (token in self.allRooms):
             return False
         
         room = self.allRooms[token]
         users = room['users']
 
-        # se a sala tiver 3 ou mais participantes, ninguem mais pode entrar
         if len(users) >= 3:
             return False
-        
-        # se o usuario ja estiver na sala, ele nao pode entrar novamente
         elif userAddress in users:
             return False
-
-        # o usuario eh inserido, caso a sala nao esteja cheia e ele ainda nao esteja na sala
         else:
             if len(users) == 0:
-                x = 190 # primeiro a entrar inicia com a posicao 190
+                x = 190
             elif len(users) == 1:
-                x = 400 # segundo a entrar inicia com a posicao 400
+                x = 400
             else:
-                x = 610 # terceiro a entrar inicia com a posicao 610
-            users[userAddress] = Player(playerId=userAddress, x=x) # o usuario eh adicionado no vetor de usuarios como uma instancia da classe Player
+                x = 610
+            users[userAddress] = Player(playerId=userAddress, playerConnection=playerConnection, x=x)
 
             return users
 
-    # retorna todos os usuarios da sala com base no seu token
+    def getTCPConnections(self):
+        return self.TCPconnections
+    
+    def getAllRooms(self):
+        return self.allRooms
+    
     def getRoomUsers(self, token):
         if token in self.allRooms:
             return self.allRooms[token]['users']
         
         return False
     
-    # retorna o vencedor da sala com base no seu token
     def getRoomWinners(self, token):
         if token in self.allRooms:
             return self.allRooms[token]['winners']
         
         return False
 
-    # Inicia o servidor UDP                 
-    def startUDPServer(self):
-        print('UDP server is running')
-        
-        # fica ouvindo por conexoes
+    def udpServer(self):
         while True:
-            request = self.getRequest()
-
-            # Inicia nova thread e passa o handler da instancia da classe Request para manipular a nova conexao
-            newThread = threading.Thread(target=self.handleRequest, args=(request,))  
+            # Reveives a new UDP connection
+            request = self.getUDPRequest()
+            # Starts thread to handle the connection
+            newThread = threading.Thread(target=self.handleUDPRequest, args=(request,))
             newThread.start()
-            
-    def handleRequest(self, request):
-        # Usuario esta criando uma sala nova 
-        if request.getRequestCode() == 100:
-            newRoomToken = self.createNewRoom() # token da sala criada
+    
+    def tcpServer(self):
+        while True:
+            # Reveives a new UDP connection
+            request = self.getTCPRequest()
+            # Starts thread to handle the connection
+            newThread = threading.Thread(target=self.handleTCPRequest, args=(request,))
+            newThread.start()
 
-            response = Response(responseCode=201, token=newRoomToken) # resposta com codigo de sucesso e token
-            self.sendResponse(response, request.getAddress())
+    def startServer(self):
+        udpThread = threading.Thread(target=self.udpServer)
+        udpThread.start()
+
+        tcpThread = threading.Thread(target=self.tcpServer)
+        tcpThread.start()
         
-        # Usuario esta entrando em uma sala 
-        elif request.getRequestCode() == 101:
-            token = request.getToken() # token da sala passada na requisicao
-            usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress()) 
+        print('Server is running')
+            
+    def handleTCPRequest(self, request):
+        firstRequest=True
+        while True:
+            if not firstRequest == True:
+                request = self.getConnectionData(request=request)
+            if request:
+                firstRequest = False
+                if request.getRequestCode() == 100:
+                    newRoomToken = self.createNewRoom()
 
-            # caso o usuario nao tenha sido inserido na sala, eh retornada uma resposta de bad request
-            if not usersInRoom: 
-                response = Response(responseCode=400)
-                self.sendResponse(response, request.getAddress())
-            else: # caso o usuario tenha inserido na sala
-                returnData = {}
-                returnData['message'] = '{} entrou na sala. {}/3'.format(request.getAddress(), len(usersInRoom))
-                returnData['playerInfo'] = usersInRoom[request.getAddress()].getPlayerAsArray()
+                    response = Response(responseCode=201, token=newRoomToken)
+                    self.sendReponseWithTCP(response, request.getConnection())
 
-                # envia para todos os jogadores da sala que um jogador entrou, assim como as informacoes do jogador
-                for addressKey in usersInRoom:
-                    response = Response(responseCode=202, returnData=returnData)
-                    self.sendResponse(response, addressKey)
+                # User listing rooms
+                elif request.getRequestCode() == 103:
+                    returnData = []
+                    for room in self.getAllRooms():
+                        returnData.append(room)
 
-                # se a partida atingiu 3 jogadores ou mais
-                if len(usersInRoom) >= 3:
-                    returnData = {}
-                    returnData['message'] = 'Partida pronta. {}/3'.format(len(usersInRoom))
-                    returnData['players'] = []
+                    response = Response(responseCode=200, returnData=returnData)
+                    self.sendReponseWithTCP(response, request.getConnection())
+                
+                # User is joining a room
+                elif request.getRequestCode() == 101:
+                    token = request.getToken()
+                    usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress(), playerConnection=request.getConnection())
 
-                    # adiciona a informacao de todos os jogadores na lista de players
-                    for player in usersInRoom:
-                        returnData['players'].append(usersInRoom[player].getPlayerAsArray())
+                    if not usersInRoom:
+                        response = Response(responseCode=400)
+                        self.sendReponseWithTCP(response, request.getConnection())
+                    else:
+                        returnData = {}
+                        returnData['message'] = '{} entrou na sala. {}/3'.format(request.getAddress(), len(usersInRoom))
+                        returnData['playerInfo'] = usersInRoom[request.getAddress()].getPlayerAsArray()
+                        for address in usersInRoom:
+                            response = Response(responseCode=202, returnData=returnData)
+                            self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
 
-                    # e repassa para todos os jogadores presentes na sala
-                    # as informacoes dos jogadores da partida
-                    for addressKey in usersInRoom:
-                        response = Response(responseCode=203, returnData=returnData)
-                        self.sendResponse(response, addressKey)
+                        if len(usersInRoom) >= 3:
+                            returnData = {}
+                            returnData['message'] = 'Partida pronta. {}/3'.format(len(usersInRoom))
+                            returnData['players'] = []
+                            for address in usersInRoom:
+                                returnData['players'].append(usersInRoom[address].getPlayerAsArray())
+                            for address in usersInRoom:
+                                response = Response(responseCode=203, returnData=returnData)
+                                self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
 
-        # Usuario ja esta em uma sala
-        elif request.getRequestCode() == 102:
+    def handleUDPRequest(self, request):
+        print(self.allRooms)
+        # User is already in a room
+        if request.getRequestCode() == 102:
             requestData = request.getRequestData()
             token = request.getToken()
-            usersInRoom = self.getRoomUsers(token=token) # pega todos os usuarios da sala
-            roomWinners = self.getRoomWinners(token=token) # pega os vencedores da sala
-            
-            # se nao encontrar a sala, envia mensagem de erro
+            usersInRoom = self.getRoomUsers(token=token)
+            roomWinners = self.getRoomWinners(token=token)
+
             if not usersInRoom:
+                print('1')
                 response = Response(responseCode=400)
-                self.sendResponse(response, request.getAddress())
-
-            # se o endereco do usuario nao estiver na sala, envia mensagem de erro
+                self.sendReponseWithUDP(response, request.getAddress())
             elif not (request.getAddress() in usersInRoom):
+                print(request.getAddress())
+                print('2')
                 response = Response(responseCode=400)
-                self.sendResponse(response, request.getAddress())
-
-            # se o endereco do usuario estiver dentre os vencedores, envia mensagem
+                self.sendReponseWithUDP(response, request.getAddress())
             elif request.getAddress() in roomWinners:
                 returnData = 'Voce ficou em {} lugar'.format(roomWinners.index(request.getAddress()) + 1)
                 response = Response(responseCode=207, returnData=returnData)
-                self.sendResponse(response, request.getAddress())
-
+                self.sendReponseWithUDP(response, request.getAddress())
             elif requestData['pressedKey'] == 'a':
                 for player in usersInRoom:
                     if usersInRoom[player].getPlayerId() == request.getAddress():
@@ -176,31 +230,25 @@ class ServerUDP:
 
                 playerObject.incrementY()
 
-                # Se o jogador concluiu o mapa 6, entao a partida acabou
-                # e apresenta a mensagem com a posicao dele na partida
                 if playerObject.getMap() >= 6:
                     roomWinners.append(request.getAddress())
                     returnData = '{} ficou em {} lugar'.format(request.getAddress(), roomWinners.index(request.getAddress()) + 1)
                     response = Response(responseCode=206, returnData=returnData)
                 else:
-                    # se nao, pegar as informacoes do jogador e preparar a resposta
                     returnData = playerObject.getPlayerAsArray()
                     response = Response(responseCode=205, returnData=returnData)
 
                 for user in usersInRoom:
-                    # e envia a resposta para todos os jogadores da partida
-                    self.sendResponse(response, user)
+                    # Sending a reply to client
+                    self.sendReponseWithUDP(response, user)
                 
-                # se a partida atiginiu 3 ou mais vencedores, acabar com a partida
-                # e retirar o token da lista de salas
                 if len(roomWinners) >= 3:
                     self.allRooms.pop(token)
-                   
-                    for user in usersInRoom: # enviar esta msg para todos os jogadores
+                    for user in usersInRoom:
                         returnData = 'A partida acabou'
                         response = Response(responseCode=210, returnData=returnData)
-                        self.sendResponse(response, user)
-            
-            else: # se nao, enviar mensagem de bad request para o jogador 
+                        self.sendReponseWithUDP(response, user)
+            else:
+                print('3')
                 response = Response(responseCode=400)
-                self.sendResponse(response, request.getAddress())
+                self.sendReponseWithUDP(response, request.getAddress())

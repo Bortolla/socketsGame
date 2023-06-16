@@ -1,4 +1,5 @@
-from ServerUDP import *     # importa classe ServerUDP
+from ServerUDP import *
 
-serverUDP = ServerUDP()     # cria uma instancia da classe
-serverUDP.startUDPServer()  # e inicia o servidor
+serverUDP = ServerUDP()
+
+serverUDP.startServer()
