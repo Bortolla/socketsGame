@@ -1,18 +1,22 @@
 import socket
 import json
 import queue
+import secrets
+import random
 from   Request       import *
 from   Response      import *
 from   pygame.locals import *
 
 class ClientUDP:
     def __init__(self) -> None:
-        self.udpAddressPort = ('127.0.0.1', 20005)
-        self.tcpAddressPort = ('127.0.0.1', 20005)
+        self.udpAddressPort    = ('127.0.0.1', 20001)
+        self.tcpAddressPort    = ('127.0.0.1', 20005)
 
         self.bufferSize        = 1024
 
+        self.thisUDPAddress    = ('127.0.0.1', random.randint(2000, 65000))
         self.UDPClientSocket   = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.UDPClientSocket.bind(self.thisUDPAddress)
 
         self.TCPClientSocket   = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.TCPClientSocket.connect(self.tcpAddressPort)
@@ -20,21 +24,14 @@ class ClientUDP:
         self.currentRoom       = None
         self.sharedQueue       = queue.Queue()
 
-        self.addressToken      = None
-
-    def getAddressAndPort(self):
-        # host, port
-        return self.TCPClientSocket.getpeername()
+        self.addressToken      = secrets.token_hex(nbytes=16)
 
     def sendRequestWithTCP(self, request):
-        request.setAddressToken(self.addressToken)
-
         bytesToSend = str.encode(json.dumps(request.getRequestAsArray()))
         self.TCPClientSocket.sendall(bytesToSend)
     
     def sendRequestWithUDP(self, request):
-        request.setAddressToken(self.addressToken)
-        
+        request.getRequestData()['tcpAddress'] = self.TCPClientSocket.getsockname()
         bytesToSend = str.encode(json.dumps(request.getRequestAsArray()))
         self.UDPClientSocket.sendto(bytesToSend, self.udpAddressPort)
     
@@ -89,7 +86,7 @@ class ClientUDP:
         self.currentRoom = roomToken
 
         # Sending message to join a room
-        request = Request(requestCode=101, token=self.currentRoom)
+        request = Request(requestCode=101, token=self.currentRoom, requestData=self.thisUDPAddress)
         self.sendRequestWithTCP(request=request)
 
         # Waiting for response

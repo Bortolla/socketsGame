@@ -106,7 +106,8 @@ while stop != True:
                                 pygame.quit()
                                 exit()
 
-                            elif event.type == KEYDOWN and event.key == K_a:
+                            #elif event.type == KEYDOWN and event.key == K_a:
+                            elif pyGameObject.playerPressedA():
                                 requestData['pressedKey'] = 'a'
                                 request = Request(
                                     requestCode=102, 
@@ -117,12 +118,8 @@ while stop != True:
 
                         # Checking for data from the server
                         if not ClientUDPClass.getQueue().empty():
-                            print('revebeu')
-
                             # Getting the next response from server
                             response = ClientUDPClass.getQueue().get()
-                            print(response)
-                            print(response.getReturnData())
                             
                             # Code 206: player just got to the finish line
                             if response.getResponseCode() == 206:

@@ -8,7 +8,7 @@ from   Player   import *
 
 class ServerUDP:
     def __init__(self) -> None:
-        self.udpAddressPort    = ('127.0.0.1', 20005)
+        self.udpAddressPort    = ('127.0.0.1', 20001)
         self.tcpAddressPort = ('127.0.0.1', 20005)
 
         self.bufferSize      = 1024
@@ -23,6 +23,13 @@ class ServerUDP:
         self.TCPServerSocket.listen()
 
         self.TCPconnections = []
+
+        self.TCPTOUDP       = {}
+        
+    def fromTcpToUdp(self, tcpaddress):
+        if tcpaddress in self.TCPTOUDP:
+            return self.TCPTOUDP[tcpaddress]
+        return None
         
     def getUDPRequest(self):
         try:
@@ -177,12 +184,15 @@ class ServerUDP:
                 # User is joining a room
                 elif request.getRequestCode() == 101:
                     token = request.getToken()
+                    clientUdpAddr = (request.getRequestData()[0], request.getRequestData()[1])
                     usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress(), playerConnection=request.getConnection())
 
                     if not usersInRoom:
                         response = Response(responseCode=400)
                         self.sendReponseWithTCP(response, request.getConnection())
                     else:
+                        self.TCPTOUDP[request.getAddress()] = clientUdpAddr
+
                         returnData = {}
                         returnData['message'] = '{} entrou na sala. {}/3'.format(request.getAddress(), len(usersInRoom))
                         returnData['playerInfo'] = usersInRoom[request.getAddress()].getPlayerAsArray()
@@ -201,10 +211,11 @@ class ServerUDP:
                                 self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
 
     def handleUDPRequest(self, request):
-        print(self.allRooms)
+        requestData = request.getRequestData()
+        requestData['tcpAddress'] = (requestData['tcpAddress'][0], requestData['tcpAddress'][1])
+
         # User is already in a room
         if request.getRequestCode() == 102:
-            requestData = request.getRequestData()
             token = request.getToken()
             usersInRoom = self.getRoomUsers(token=token)
             roomWinners = self.getRoomWinners(token=token)
@@ -212,27 +223,27 @@ class ServerUDP:
             if not usersInRoom:
                 print('1')
                 response = Response(responseCode=400)
-                self.sendReponseWithUDP(response, request.getAddress())
-            elif not (request.getAddress() in usersInRoom):
-                print(request.getAddress())
+                self.sendReponseWithUDP(response, self.fromTcpToUdp(requestData['tcpAddress']))
+            elif not (requestData['tcpAddress'] in usersInRoom):
+                print(requestData['tcpAddress'])
                 print('2')
                 response = Response(responseCode=400)
-                self.sendReponseWithUDP(response, request.getAddress())
-            elif request.getAddress() in roomWinners:
-                returnData = 'Voce ficou em {} lugar'.format(roomWinners.index(request.getAddress()) + 1)
+                self.sendReponseWithUDP(response, self.fromTcpToUdp(requestData['tcpAddress']))
+            elif requestData['tcpAddress'] in roomWinners:
+                returnData = 'Voce ficou em {} lugar'.format(roomWinners.index(requestData['tcpAddress']) + 1)
                 response = Response(responseCode=207, returnData=returnData)
-                self.sendReponseWithUDP(response, request.getAddress())
+                self.sendReponseWithUDP(response, self.fromTcpToUdp(requestData['tcpAddress']))
             elif requestData['pressedKey'] == 'a':
                 for player in usersInRoom:
-                    if usersInRoom[player].getPlayerId() == request.getAddress():
+                    if usersInRoom[player].getPlayerId() == requestData['tcpAddress']:
                         playerObject = usersInRoom[player]
                         break
 
                 playerObject.incrementY()
 
                 if playerObject.getMap() >= 6:
-                    roomWinners.append(request.getAddress())
-                    returnData = '{} ficou em {} lugar'.format(request.getAddress(), roomWinners.index(request.getAddress()) + 1)
+                    roomWinners.append(requestData['tcpAddress'])
+                    returnData = '{} ficou em {} lugar'.format(requestData['tcpAddress'], roomWinners.index(requestData['tcpAddress']) + 1)
                     response = Response(responseCode=206, returnData=returnData)
                 else:
                     returnData = playerObject.getPlayerAsArray()
@@ -240,15 +251,15 @@ class ServerUDP:
 
                 for user in usersInRoom:
                     # Sending a reply to client
-                    self.sendReponseWithUDP(response, user)
+                    self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
                 
                 if len(roomWinners) >= 3:
                     self.allRooms.pop(token)
                     for user in usersInRoom:
                         returnData = 'A partida acabou'
                         response = Response(responseCode=210, returnData=returnData)
-                        self.sendReponseWithUDP(response, user)
+                        self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
             else:
                 print('3')
                 response = Response(responseCode=400)
-                self.sendReponseWithUDP(response, request.getAddress())
+                self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
