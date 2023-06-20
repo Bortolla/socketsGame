@@ -34,17 +34,17 @@ class PyGameClass:
     
     def setBackgroundImageForThisPlayer(self, thisPlayer):
         if thisPlayer.getMap() == 0:
-            background_image = pygame.image.load('images/beach.png') 
+            background_image = pygame.image.load('images/lane1.jpg') 
         elif thisPlayer.getMap() == 1:
-            background_image = pygame.image.load('images/grass.jpg')
+            background_image = pygame.image.load('images/lane2.jpg')
         elif thisPlayer.getMap() == 2:
-            background_image = pygame.image.load('images/ruins.png')
+            background_image = pygame.image.load('images/lane3.jpg')
         elif thisPlayer.getMap() == 3:
-            background_image = pygame.image.load('images/snow.jpg')
+            background_image = pygame.image.load('images/lane4.jpg')
         elif thisPlayer.getMap() == 4:
-            background_image = pygame.image.load('images/winter1.png')
+            background_image = pygame.image.load('images/lane5.jpg')
         elif thisPlayer.getMap() == 5:
-            background_image = pygame.image.load('images/winter2.png')
+            background_image = pygame.image.load('images/lane6.jpg')
 
         background_image = pygame.transform.scale(background_image, (self.screenWidth, self.screenHeight))
 
