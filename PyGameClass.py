@@ -11,11 +11,17 @@ class PyGameClass:
         self.clock = pygame.time.Clock()
 
     def drawPlayer(self, playerObject):
-        pygame.draw.rect(
-            self.screen, 
-            (255, 0, 0),  
-            (playerObject.getX(), playerObject.getY(), self.playerWidth, self.playerHeight)
-        )
+        player_image = pygame.image.load('./images/megaman.jpg')
+        player_image = pygame.transform.scale(player_image, (self.playerWidth, self.playerHeight))
+        player_rect = player_image.get_rect()
+        player_rect.topleft = (playerObject.getX(), playerObject.getY())
+        self.screen.blit(player_image, player_rect)
+
+        # pygame.draw.rect(
+        #     self.screen, 
+        #     (255, 0, 0),  
+        #     (playerObject.getX(), playerObject.getY(), self.playerWidth, self.playerHeight)
+        # )
 
     def updateDisplay(self):
         pygame.display.update()
