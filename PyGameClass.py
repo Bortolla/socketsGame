@@ -1,5 +1,7 @@
+import os
 import pygame
 from   pygame.locals import *
+import pygame.freetype
 
 class PyGameClass:
     def __init__(self) -> None:
@@ -9,6 +11,14 @@ class PyGameClass:
         self.playerWidth = 50
         self.playerHeight = 50
         self.clock = pygame.time.Clock()
+
+        pygame.freetype.init()
+        self.font = pygame.freetype.SysFont(os.path.join("font", "Roboto-Medium") , 24)
+
+    def drawMessage(self, message):
+        text_surface, text_rect = self.font.render(message, True, (255, 255, 255))
+        text_rect.center = (self.screenWidth // 2, self.screenHeight // 2)
+        self.screen.blit(text_surface, text_rect)
 
     def drawPlayer(self, playerObject):
         player_image = pygame.image.load('./images/megaman.jpg')

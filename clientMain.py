@@ -123,6 +123,8 @@ while stop != True:
                             
                             # Code 206: player just got to the finish line
                             if response.getResponseCode() == 206:
+                                pyGameObject.drawMessage('Você chegou ao fim')
+                                pyGameObject.updateDisplay()
                                 print(response.getReturnData())
                             # Code 207: player already got to the finish line
                             elif response.getResponseCode() == 207:
