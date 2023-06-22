@@ -10,7 +10,7 @@ ClientUDPClass = ClientUDP()
 
 stop = False
 while stop != True:
-    print('MENU: 1. Criar sala 2. Listar salas 3. Entrar em uma sala')
+    print('MENU: 1. Criar sala \n2. Listar salas \n3. Entrar em uma sala')
     action = str(input('-> ')).strip()
 
     if not action in ['1', '2', '3', '1.', '2.', '3.']:
@@ -22,8 +22,7 @@ while stop != True:
             print('Erro ao criar sala. Tente novamente')
         elif response.getResponseCode() == 201:
             print('Sala criada. Chave de acesso: {}'.format(response.getToken()))
-        
-
+    
     elif action in ['2', '2.']:
         response = ClientUDPClass.listRooms()
 
@@ -39,8 +38,15 @@ while stop != True:
                     print('Sala {}: {}'.format(i + 1, roomsList[i]))
 
     elif action in ['3', '3.']:
+        requestData = {}
+
+        name = ''
+        while name == '' or len(name) >= 10:
+            name = str(input('Digite o seu nome na partida: '))
+        
         roomToken = str(input('Informe o token da sala: ')).strip()
-        response = ClientUDPClass.joinRoom(roomToken=roomToken)
+        response = ClientUDPClass.joinRoom(roomToken=roomToken, 
+                                           name=name)
 
         if not response:
             print('Erro inesperado. Tente novamente')
@@ -64,7 +70,6 @@ while stop != True:
                 # Match is ready
                 elif response.getResponseCode() == 203:
                     responseData = response.getReturnData()
-                    print(responseData['message'])
 
                     # List to append the other players objects
                     playerObjects = []
@@ -95,12 +100,15 @@ while stop != True:
                     getResponsesThread = threading.Thread(target=ClientUDPClass.getResponses)
                     getResponsesThread.start()
 
+                    messagesList = []
                     while True:
                         pyGameObject.setTick(30)
                         pyGameObject.fillScreen((0,0,0))
 
                         # Getting the action of the player and sending to the server
                         requestData = {}
+                        requestData['name'] = name
+
                         for event in pyGameObject.getEvents():
                             if event.type == QUIT:
                                 pygame.quit()
@@ -114,6 +122,7 @@ while stop != True:
                                     token=ClientUDPClass.currentRoom, 
                                     requestData=requestData
                                 )
+
                                 ClientUDPClass.sendRequestWithUDP(request=request)
 
                         # Checking for data from the server
@@ -123,21 +132,21 @@ while stop != True:
                             
                             # Code 206: player just got to the finish line
                             if response.getResponseCode() == 206:
-                                pyGameObject.drawMessage('Você chegou ao fim')
-                                pyGameObject.updateDisplay()
+                                messagesList.append(response.getReturnData())
                                 print(response.getReturnData())
                             # Code 207: player already got to the finish line
                             elif response.getResponseCode() == 207:
                                 print(response.getReturnData())
                             # Code 210: match finished
                             elif response.getResponseCode() == 210:
+                                messagesList.append(response.getReturnData())
                                 print(response.getReturnData())
                             # Code 205: player is in match
                             elif response.getResponseCode() == 205:
                                 # The responseData here is the new position of one of the players
                                 responseData = response.getReturnData()
                                 # Creating a player object with de new data
-                                playerNewInfo = Player(playerId=responseData['playerId'], x=responseData['x'], y=responseData['y'], map=responseData['map'], message=responseData['message'])
+                                playerNewInfo = Player(name=responseData['name'], playerId=responseData['playerId'], x=responseData['x'], y=responseData['y'], map=responseData['map'], message=responseData['message'])
 
                                 # Setting the new data to the right player
                                 if thisPlayer.getPlayerId() == playerNewInfo.getPlayerId():
@@ -146,29 +155,31 @@ while stop != True:
                                     player1 = playerNewInfo
                                 elif player2.getPlayerId() == playerNewInfo.getPlayerId():
                                     player2 = playerNewInfo
-
-                                # Drawing the right image for this player location
-                                pyGameObject.setBackgroundImageForThisPlayer(thisPlayer)
-                                
-                                # Drawing the players on the same map of this player
-                                if thisPlayer.getMap() == player1.getMap() and thisPlayer.getMap() == player2.getMap():
-                                    pyGameObject.drawPlayer(thisPlayer)
-                                    pyGameObject.drawPlayer(player1)
-                                    pyGameObject.drawPlayer(player2)
-
-                                elif thisPlayer.getMap() == player1.getMap():
-                                    pyGameObject.drawPlayer(thisPlayer)
-                                    pyGameObject.drawPlayer(player1)
-
-                                elif thisPlayer.getMap() == player2.getMap():
-                                    pyGameObject.drawPlayer(thisPlayer)
-                                    pyGameObject.drawPlayer(player2)
-
-                                else:
-                                    pyGameObject.drawPlayer(thisPlayer)
-
-                                # Update the drawings to the display
-                                pyGameObject.updateDisplay()
-
                             else:
                                 print('Algo deu errado')
+
+                            # Drawing the right image for this player location
+                            pyGameObject.setBackgroundImageForThisPlayer(thisPlayer)
+                            
+                            # Drawing the players on the same map of this player
+                            if thisPlayer.getMap() == player1.getMap() and thisPlayer.getMap() == player2.getMap():
+                                pyGameObject.drawPlayer(thisPlayer)
+                                pyGameObject.drawPlayer(player1)
+                                pyGameObject.drawPlayer(player2)
+
+                            elif thisPlayer.getMap() == player1.getMap():
+                                pyGameObject.drawPlayer(thisPlayer)
+                                pyGameObject.drawPlayer(player1)
+
+                            elif thisPlayer.getMap() == player2.getMap():
+                                pyGameObject.drawPlayer(thisPlayer)
+                                pyGameObject.drawPlayer(player2)
+
+                            else:
+                                pyGameObject.drawPlayer(thisPlayer)
+                            
+                            for i in range(0, len(messagesList)):
+                                pyGameObject.drawMessages(messagesList)
+
+                            # Update the drawings to the display
+                            pyGameObject.updateDisplay()

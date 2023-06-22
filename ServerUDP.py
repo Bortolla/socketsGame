@@ -113,7 +113,7 @@ class ServerUDP:
         return token
     
     # adiciona um usuario a uma sala ja existente
-    def addUserToRoom(self, token, userAddress, playerConnection):
+    def addUserToRoom(self, token, userAddress, playerConnection, playerName):
         if not (token in self.allRooms): # caso a sala nao exista
             return False
         
@@ -137,7 +137,7 @@ class ServerUDP:
                 x = 610 
 
             # eh armazenada a instancia do Player na sala
-            users[userAddress] = Player(playerId=userAddress, playerConnection=playerConnection, x=x)
+            users[userAddress] = Player(playerId=userAddress, playerConnection=playerConnection, x=x, name=playerName)
 
             return users
 
@@ -224,8 +224,9 @@ class ServerUDP:
                 # User is joining a room
                 elif request.getRequestCode() == 101:
                     token = request.getToken()
-                    clientUdpAddr = (request.getRequestData()[0], request.getRequestData()[1])
-                    usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress(), playerConnection=request.getConnection())
+                    clientUdpAddr = (request.getRequestData()['UDPAddress'][0], request.getRequestData()['UDPAddress'][1])
+                    
+                    usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress(), playerConnection=request.getConnection(), playerName=request.getRequestData()['name'])
 
                     if not usersInRoom:
                         response = Response(responseCode=400)
@@ -234,8 +235,10 @@ class ServerUDP:
                         self.TCPTOUDP[request.getAddress()] = clientUdpAddr
 
                         returnData = {}
-                        returnData['message'] = '{} entrou na sala. {}/3'.format(request.getAddress(), len(usersInRoom))
+                        returnData['message'] = '{} entrou na sala. {}/3'.format(request.getRequestData()['name'], len(usersInRoom))
+                        
                         returnData['playerInfo'] = usersInRoom[request.getAddress()].getPlayerAsArray()
+                        
                         for address in usersInRoom:
                             response = Response(responseCode=202, returnData=returnData)
                             self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
@@ -284,7 +287,7 @@ class ServerUDP:
 
                 if playerObject.getMap() >= 6:
                     roomWinners.append(requestData['tcpAddress'])
-                    returnData = '{} ficou em {} lugar'.format(requestData['tcpAddress'], roomWinners.index(requestData['tcpAddress']) + 1)
+                    returnData = '{} ficou em {} lugar'.format(requestData['name'], roomWinners.index(requestData['tcpAddress']) + 1)
                     response = Response(responseCode=206, returnData=returnData)
                 else:
                     returnData = playerObject.getPlayerAsArray()

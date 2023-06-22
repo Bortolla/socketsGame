@@ -82,11 +82,15 @@ class ClientUDP:
         # Waiting for response
         return self.getTCPResponse()
 
-    def joinRoom(self, roomToken):
+    def joinRoom(self, roomToken, name):
+        requestData = {}
+        requestData['name'] = name
+        requestData['UDPAddress'] = self.thisUDPAddress
+
         self.currentRoom = roomToken
 
         # Sending message to join a room
-        request = Request(requestCode=101, token=self.currentRoom, requestData=self.thisUDPAddress)
+        request = Request(requestCode=101, token=self.currentRoom, requestData=requestData)
         self.sendRequestWithTCP(request=request)
 
         # Waiting for response

@@ -12,26 +12,32 @@ class PyGameClass:
         self.playerHeight = 50
         self.clock = pygame.time.Clock()
 
-        pygame.freetype.init()
-        self.font = pygame.freetype.SysFont(os.path.join("font", "Roboto-Medium") , 24)
+        pygame.font.init()
+        self.font = pygame.font.Font(None, 24)
 
-    def drawMessage(self, message):
-        text_surface, text_rect = self.font.render(message, True, (255, 255, 255))
-        text_rect.center = (self.screenWidth // 2, self.screenHeight // 2)
-        self.screen.blit(text_surface, text_rect)
+    def drawMessages(self, messagesList):
+        x = 100
+        y = 50
+
+        for i in range(0, len(messagesList)):
+            text_surface = self.font.render(messagesList[i], True, (0, 0, 0))
+            text_rect = text_surface.get_rect()
+            text_rect.center = (x, y)
+            self.screen.blit(text_surface, text_rect)
+
+            y = y + 50
 
     def drawPlayer(self, playerObject):
-        player_image = pygame.image.load('./images/megaman.jpg')
+        text_surface = self.font.render(playerObject.getPlayerName(), True, (0, 0, 0))
+        text_rect = text_surface.get_rect()
+        text_rect.center = (playerObject.getX() + 18, playerObject.getY() - 15)
+        self.screen.blit(text_surface, text_rect)
+
+        player_image = pygame.image.load('./images/spaceship.PNG')
         player_image = pygame.transform.scale(player_image, (self.playerWidth, self.playerHeight))
         player_rect = player_image.get_rect()
         player_rect.topleft = (playerObject.getX(), playerObject.getY())
         self.screen.blit(player_image, player_rect)
-
-        # pygame.draw.rect(
-        #     self.screen, 
-        #     (255, 0, 0),  
-        #     (playerObject.getX(), playerObject.getY(), self.playerWidth, self.playerHeight)
-        # )
 
     def updateDisplay(self):
         pygame.display.update()
@@ -50,17 +56,17 @@ class PyGameClass:
     
     def setBackgroundImageForThisPlayer(self, thisPlayer):
         if thisPlayer.getMap() == 0:
-            background_image = pygame.image.load('images/lane1.jpg') 
+            background_image = pygame.image.load('images/beach.png') 
         elif thisPlayer.getMap() == 1:
-            background_image = pygame.image.load('images/lane2.jpg')
+            background_image = pygame.image.load('images/grass.jpg')
         elif thisPlayer.getMap() == 2:
-            background_image = pygame.image.load('images/lane3.jpg')
+            background_image = pygame.image.load('images/ruins.png')
         elif thisPlayer.getMap() == 3:
-            background_image = pygame.image.load('images/lane4.jpg')
+            background_image = pygame.image.load('images/snow.jpg')
         elif thisPlayer.getMap() == 4:
-            background_image = pygame.image.load('images/lane5.jpg')
+            background_image = pygame.image.load('images/winter1.png')
         elif thisPlayer.getMap() == 5:
-            background_image = pygame.image.load('images/lane6.jpg')
+            background_image = pygame.image.load('images/winter2.png')
 
         background_image = pygame.transform.scale(background_image, (self.screenWidth, self.screenHeight))
 
