@@ -12,6 +12,7 @@ ClientUDPClass = ClientUDP()
 stop = False
 returnToMenu = False
 pygameQuit = False
+
 while stop != True:
     print('MENU: 1. Criar sala \n2. Listar salas \n3. Entrar em uma sala')
     action = str(input('-> ')).strip()
@@ -76,9 +77,10 @@ while stop != True:
 
                 # Match is ready
                 elif response.getResponseCode() == 203:
-                    print('Digite aqui')
-                    
-                    
+                    # inicia o chat
+                    getUserInputThread = threading.Thread(target=ClientUDPClass.getUserMessage(name))
+                    getUserInputThread.start()
+
                     responseData = response.getReturnData()
 
                     # List to append the other players objects

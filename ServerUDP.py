@@ -292,6 +292,33 @@ class ServerUDP:
                                 response = Response(responseCode=203, returnData=returnData)
                                 self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
 
+                # enviar mensagem para os usuarios da sala
+                elif request.getRequestCode() == 199:
+                    requestData = request.getRequestAsArray()
+                    returnData = requestData['requestData']
+
+                    print(requestData)
+                    
+                    roomToken = requestData['token']
+                    usersRoom = self.getRoomUsers(roomToken)
+
+                    print(f'Usuários na sala:\n{usersRoom}')
+
+                    for user in usersRoom:
+                        response = Response(responseCode=299, returnData=returnData)
+
+                        self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
+                        
+                        #print(f'\nUsuário 1 na sala: {user}')
+
+
+
+                    """newRoomToken = self.createNewRoom()
+
+                    # envia resposta de sucesso com o token da sala
+                    response = Response(responseCode=201, token=newRoomToken)
+                    self.sendReponseWithTCP(response, request.getConnection())"""
+
     # metodo que manipula as conexoes UDP
     def handleUDPRequest(self, request):
         requestData = request.getRequestData() # dados da requisicao

@@ -128,3 +128,18 @@ class ClientUDP:
 
         # Aguarda e retorna a resposta
         return self.getTCPResponse()
+    
+    def getUserMessage(self, userName):
+        print('\n=x=x=x=x= Bem-vindo ao chat! =x=x=x=x=\n')
+        userInput = ''
+
+        while True:
+            userInput = input('Digite sua mensagem: ')
+            print(f'{userName}: {userInput}')
+            
+            requestData = {}
+            requestData['userName'] = userName
+            requestData['userInput'] = userInput
+
+            request = Request(requestCode=199, token=self.currentRoom,requestData=userInput)
+            self.sendRequestWithTCP(request=request)

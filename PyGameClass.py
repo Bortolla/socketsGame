@@ -29,16 +29,22 @@ class PyGameClass:
             y = y + 50
 
     def drawPlayer(self, playerObject):
-        text_surface = self.font.render(playerObject.getPlayerName(), True, (0, 0, 0))
+        text_surface = self.font.render(playerObject.getPlayerName(), True, (255, 0, 0))
         text_rect = text_surface.get_rect()
         text_rect.center = (playerObject.getX() + 18, playerObject.getY() - 15)
         self.screen.blit(text_surface, text_rect)
 
-        player_image = pygame.image.load('./images/spaceship.png')
+        pygame.draw.rect(
+            self.screen, 
+            (255, 0, 0),  
+            (playerObject.getX(), playerObject.getY(), self.playerWidth, self.playerHeight)
+        )
+        
+        """player_image = pygame.image.load('./images/spaceship.png')
         player_image = pygame.transform.scale(player_image, (self.playerWidth, self.playerHeight))
         player_rect = player_image.get_rect()
         player_rect.topleft = (playerObject.getX(), playerObject.getY())
-        self.screen.blit(player_image, player_rect)
+        self.screen.blit(player_image, player_rect)"""
 
     def updateDisplay(self):
         pygame.display.update()
