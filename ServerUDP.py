@@ -295,16 +295,21 @@ class ServerUDP:
                 # enviar mensagem para os usuarios da sala
                 elif request.getRequestCode() == 199:
                     requestData = request.getRequestAsArray()
-                    returnData = requestData['requestData']
+                    messageData = requestData['requestData']
 
-                    print(requestData)
+                    print(f"{messageData['name']}: {messageData['message']}")
+
+                    print(f'requestData:\n{requestData}')
+                    print(f'\nmessageData:\n{messageData}')
                     
                     roomToken = requestData['token']
-                    usersRoom = self.getRoomUsers(roomToken)
+                    usersInRoom = self.getRoomUsers(roomToken)
 
-                    print(f'Usuários na sala:\n{usersRoom}')
+                    #print(f'Usuários na sala:\n{usersInRoom}')
 
-                    for user in usersRoom:
+                    returnData = f"{messageData['name']}: {messageData['message']}"
+
+                    for address in usersInRoom:
                         response = Response(responseCode=299, returnData=returnData)
 
                         self.sendReponseWithTCP(response, usersInRoom[address].getConnection())

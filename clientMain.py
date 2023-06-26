@@ -78,8 +78,11 @@ while stop != True:
                 # Match is ready
                 elif response.getResponseCode() == 203:
                     # inicia o chat
-                    getUserInputThread = threading.Thread(target=ClientUDPClass.getUserMessage(name))
+                    getUserInputThread = threading.Thread(target=ClientUDPClass.getUserMessage, args=(name,))
                     getUserInputThread.start()
+
+
+                    ##############################
 
                     responseData = response.getReturnData()
 

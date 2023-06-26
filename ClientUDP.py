@@ -87,10 +87,10 @@ class ClientUDP:
     # Fica ouvindo pelas respostas UDP do servidor
     def getResponses(self):
         while True:
-            response = self.getUDPReponse()
+            udpResponse = self.getUDPReponse()
             # Adiciona a resposta do servidor a fila de respostas
-            if response:                   
-                self.sharedQueue.put(response)
+            if udpResponse:                   
+                self.sharedQueue.put(udpResponse)
 
     # Pega a primeira resposta da fila
     def getQueue(self):
@@ -119,7 +119,7 @@ class ClientUDP:
         requestData = {}
         requestData['name'] = name
         requestData['UDPAddress'] = self.thisUDPAddress
-
+        
         self.currentRoom = roomToken # a nova sala atual do usuario eh atualizada
 
         # Realiza a requisicao para o servidor TCP
@@ -135,11 +135,11 @@ class ClientUDP:
 
         while True:
             userInput = input('Digite sua mensagem: ')
-            print(f'{userName}: {userInput}')
+            #print(f'{userName}: {userInput}')
             
             requestData = {}
-            requestData['userName'] = userName
-            requestData['userInput'] = userInput
+            requestData['name'] = userName
+            requestData['message'] = userInput
 
-            request = Request(requestCode=199, token=self.currentRoom,requestData=userInput)
+            request = Request(requestCode=199, token=self.currentRoom,requestData=requestData)
             self.sendRequestWithTCP(request=request)
