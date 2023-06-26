@@ -5,10 +5,13 @@ from   PyGameClass   import *
 from   sys           import exit
 import pygame
 import threading
+import time
 
 ClientUDPClass = ClientUDP()
 
 stop = False
+returnToMenu = False
+pygameQuit = False
 while stop != True:
     print('MENU: 1. Criar sala \n2. Listar salas \n3. Entrar em uma sala')
     action = str(input('-> ')).strip()
@@ -58,6 +61,10 @@ while stop != True:
 
             print('Voce entrou na sala. Aguardando usuarios.')
             while True:
+                if returnToMenu == True:
+                    returnToMenu = False
+                    break
+                
                 response = ClientUDPClass.getTCPResponse()
 
                 if not response:
@@ -101,6 +108,7 @@ while stop != True:
                     getResponsesThread.start()
 
                     messagesList = []
+
                     while True:
                         pyGameObject.setTick(30)
                         pyGameObject.fillScreen((0,0,0))
@@ -111,8 +119,8 @@ while stop != True:
 
                         for event in pyGameObject.getEvents():
                             if event.type == QUIT:
+                                pygameQuit = True
                                 pygame.quit()
-                                exit()
 
                             #elif event.type == KEYDOWN and event.key == K_a:
                             elif pyGameObject.playerPressedA():
@@ -124,6 +132,10 @@ while stop != True:
                                 )
 
                                 ClientUDPClass.sendRequestWithUDP(request=request)
+                        if pygameQuit == True:
+                            pygameQuit = False
+                            returnToMenu = True
+                            break
 
                         # Checking for data from the server
                         if not ClientUDPClass.getQueue().empty():
@@ -183,3 +195,15 @@ while stop != True:
 
                             # Update the drawings to the display
                             pyGameObject.updateDisplay()
+
+                            if response.getResponseCode() == 210:
+                                returnToMenu = True
+                                sleep = 0
+                                while sleep != 5:
+                                    for event in pyGameObject.getEvents():
+                                        pass
+                                    time.sleep(1)
+                                    sleep = sleep + 1
+                                pygame.quit()
+                                break
+

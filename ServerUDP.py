@@ -49,18 +49,17 @@ class ServerUDP:
     
     # Recebe conexao TCP
     def getTCPRequest(self):
-        try:
-            # objeto conexao TCP, e (endereco, porta)
-            conn, addr = self.TCPServerSocket.accept()
-            clientMessageArray = json.loads(conn.recv(self.bufferSize))
-            clientMessageArray['address'] =  addr
-            clientMessageArray['connection'] = conn
+       
+        # objeto conexao TCP, e (endereco, porta)
+        conn, addr = self.TCPServerSocket.accept()
+        clientMessageArray = json.loads(conn.recv(self.bufferSize))
+        clientMessageArray['address'] =  addr
+        clientMessageArray['connection'] = conn
 
-            request = Request()
+        request = Request()
 
-            return request.createRequestFromArray(clientMessageArray)
-        except:
-            return False
+        return request.createRequestFromArray(clientMessageArray)
+       
 
     # envia resposta para uma conexao UDP
     def sendReponseWithUDP(self, response, address):
@@ -77,7 +76,10 @@ class ServerUDP:
     # Pega os dados da conexao de um cliente TCP
     def getConnectionData(self, request):   
         # Dados enviados como JSON eh convertido para dicionario
-        clientMessageArray = json.loads(request.getConnection().recv(self.bufferSize))
+        try:
+            clientMessageArray = json.loads(request.getConnection().recv(self.bufferSize))
+        except:
+            return False
 
         # eh criado uma instancia da classe Request
         # com os dados enviados pelo cliente
@@ -203,7 +205,8 @@ class ServerUDP:
         while True:
             if not firstRequest == True:
                 request = self.getConnectionData(request=request)
-            
+                if request == False:
+                    break
             if request:
                 firstRequest = False
                 if request.getRequestCode() == 100:

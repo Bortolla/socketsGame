@@ -19,7 +19,6 @@ class ClientUDP:
         self.UDPClientSocket.bind(self.thisUDPAddress)
 
         self.TCPClientSocket   = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.TCPClientSocket.connect(self.tcpAddressPort)
 
         self.currentRoom       = None
         self.sharedQueue       = queue.Queue()
@@ -27,6 +26,11 @@ class ClientUDP:
         self.addressToken      = secrets.token_hex(nbytes=16)
 
     def sendRequestWithTCP(self, request):
+        try:
+            self.TCPClientSocket.getpeername()
+        except:
+            self.TCPClientSocket.connect(self.tcpAddressPort)
+            
         bytesToSend = str.encode(json.dumps(request.getRequestAsArray()))
         self.TCPClientSocket.sendall(bytesToSend)
     
