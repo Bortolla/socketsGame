@@ -1,19 +1,21 @@
-import socket
-import threading
-import secrets
-import json
-from   Request  import *
-from   Response import *
-from   Player   import *
+import socket               # biblioteca de sockets
+import threading            # biblioteca de threads
+import secrets              # biblioteca para criacao de hashes
+import json                 # biblioteca para manipulacao de JSON
+from   Request  import *    # classe Request
+from   Response import *    # classe Response
+from   Player   import *    # classe Player
 
+# Classe que trata de instanciar servidores TCP e UDP para comunicacao com o cliente,
+# e fazer as manipulacoes necessarias, como tratar as requisicoes, criar salas, etc.
 class ServerUDP:
     def __init__(self) -> None:
-        self.udpAddressPort    = ('127.0.0.1', 20001)
-        self.tcpAddressPort = ('127.0.0.1', 20005)
+        self.udpAddressPort    = ('127.0.0.1', 20001) # (endereço, porta) servidor UDP
+        self.tcpAddressPort = ('127.0.0.1', 20005)    # (endereço, porta) servidor TCP
 
-        self.bufferSize      = 1024
+        self.bufferSize      = 1024  # tamanho max em Bytes dos dados transportados
 
-        self.allRooms        = {}
+        self.allRooms        = {}    # dicionaria de todas as salas
 
         # instancia do servidor UDP
         self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -24,60 +26,64 @@ class ServerUDP:
         self.TCPServerSocket.bind(self.tcpAddressPort)
         self.TCPServerSocket.listen()
 
-        self.TCPconnections = [] # conexoes TCP 
+        self.TCPconnections = [] # conexoes TCP feitas ao servidor
 
         # dicionario com os enderecos TCP e UDP respectivos ao mesmo cliente
-        self.TCPTOUDP       = {} 
+        self.TCPTOUDP       = {}  # (endereço, porta) TCP: (endereço, porta) UDP
         
     # retorna o correspondente endereco UDP com base no endereco TCP de um cliente
     def fromTcpToUdp(self, tcpaddress):
         if tcpaddress in self.TCPTOUDP:
-            return self.TCPTOUDP[tcpaddress]
+            return self.TCPTOUDP[tcpaddress] # endereco UDP do cliente
         return None
         
-    # Recebe conexao UDP
+    # Recebe requisição UDP contendo os dados da requisição e o endereço do cliente
+    # retorna uma instancia da classe Request a partir dos dados enviados pelo cliente
     def getUDPRequest(self):
         try:
             bytesAddressPair = self.UDPServerSocket.recvfrom(self.bufferSize)
             clientMessageArray = json.loads(bytesAddressPair[0]) # dados enviados na requisicao
             clientMessageArray['address'] =  bytesAddressPair[1] # endereco do cliente
             request = Request()
-
+            
             return request.createRequestFromArray(clientMessageArray)
+        
         except:
             return False
     
-    # Recebe conexao TCP
+    # Recebe requisicao TCP e retorna uma instancia da classe Requisicao
+    # a partir dos dados enviados 
     def getTCPRequest(self):
-       
         # objeto conexao TCP, e (endereco, porta)
         conn, addr = self.TCPServerSocket.accept()
+
+        # recebe o dado em formato JSON e converte para dicionario Python
         clientMessageArray = json.loads(conn.recv(self.bufferSize))
-        clientMessageArray['address'] =  addr
-        clientMessageArray['connection'] = conn
+        clientMessageArray['address'] =  addr   # endereco do cliente
+        clientMessageArray['connection'] = conn # objeto socket 
 
         request = Request()
 
         return request.createRequestFromArray(clientMessageArray)
        
-
-    # envia resposta para uma conexao UDP
+    # envia uma resposta UDP
     def sendReponseWithUDP(self, response, address):
         # cria um JSON com base na Resposta, e entao transforma em uma string
         bytesToSend = str.encode(json.dumps(response.getResponseAsArray()))
-        self.UDPServerSocket.sendto(bytesToSend, address)
+        self.UDPServerSocket.sendto(bytesToSend, address) # envia para o endereco
 
-    # envia resposta para uma conexao TCP
+    # envia uma resposta TCP
     def sendReponseWithTCP(self, response, connection):
         # cria um JSON com base na Resposta, e entao transforma em uma string
         bytesToSend = str.encode(json.dumps(response.getResponseAsArray()))
-        connection.sendall(bytesToSend)
+        connection.sendall(bytesToSend) # envia para o endereco
 
     # Pega os dados da conexao de um cliente TCP
     def getConnectionData(self, request):   
-        # Dados enviados como JSON eh convertido para dicionario
+        # Dados enviados como JSON sao convertidos para dicionario
         try:
             clientMessageArray = json.loads(request.getConnection().recv(self.bufferSize))
+
         except:
             return False
 
@@ -111,7 +117,8 @@ class ServerUDP:
         self.allRooms[token] = {'users': {},
                                 'winners': []
                                }
-
+        
+        # retorna o token identificador da sala criada
         return token
     
     # adiciona um usuario a uma sala ja existente
@@ -141,6 +148,7 @@ class ServerUDP:
             # eh armazenada a instancia do Player na sala
             users[userAddress] = Player(playerId=userAddress, playerConnection=playerConnection, x=x, name=playerName)
 
+            # retorna o dicionario de usuarios atualizado
             return users
 
     # retorna todas as conexoes TCP
@@ -153,15 +161,15 @@ class ServerUDP:
     
     # retorna todos os jogadores de uma sala
     def getRoomUsers(self, token):
-        if token in self.allRooms:
-            return self.allRooms[token]['users']
+        if token in self.allRooms:                  # se a sala existir
+            return self.allRooms[token]['users']    # enviar seus usuarios
         
         return False
     
     # retorna o(s) vencedor(es) de uma sala
     def getRoomWinners(self, token):
-        if token in self.allRooms:
-            return self.allRooms[token]['winners']
+        if token in self.allRooms:                  # se a sala existir
+            return self.allRooms[token]['winners']  # envia seus vencedores
         
         return False
 
@@ -202,56 +210,84 @@ class ServerUDP:
     def handleTCPRequest(self, request):
         firstRequest=True
 
+        # manipula todas as requisicoes que forem recebidas
         while True:
             if not firstRequest == True:
                 request = self.getConnectionData(request=request)
                 if request == False:
                     break
+
             if request:
                 firstRequest = False
+                
+                # requisicao codigo 100 cria uma nova sala
                 if request.getRequestCode() == 100:
                     newRoomToken = self.createNewRoom()
 
+                    # envia resposta de sucesso com o token da sala
                     response = Response(responseCode=201, token=newRoomToken)
                     self.sendReponseWithTCP(response, request.getConnection())
 
-                # User listing rooms
+                # requisicao codigo 103 lista todas as salas
                 elif request.getRequestCode() == 103:
                     returnData = []
+
+                    # adiciona todas as salas no dado de retorno
                     for room in self.getAllRooms():
                         returnData.append(room)
-
+                    
+                    # envia resposta de sucesso com todas as salas
                     response = Response(responseCode=200, returnData=returnData)
                     self.sendReponseWithTCP(response, request.getConnection())
                 
-                # User is joining a room
+                # requisicao codigo 101 usuario entra em uma sala
                 elif request.getRequestCode() == 101:
-                    token = request.getToken()
+                    token = request.getToken() # pega o token enviado na requisicao
+                    
+                    # [endereco, porta UDP]
                     clientUdpAddr = (request.getRequestData()['UDPAddress'][0], request.getRequestData()['UDPAddress'][1])
                     
+                    # adiciona um usuario na sala especificada, utilizando seu 
+                    # endereço, conexao e nome passado
                     usersInRoom = self.addUserToRoom(token=token, userAddress=request.getAddress(), playerConnection=request.getConnection(), playerName=request.getRequestData()['name'])
 
+                    # caso retorne False entao enviar mensagem de erro
                     if not usersInRoom:
                         response = Response(responseCode=400)
                         self.sendReponseWithTCP(response, request.getConnection())
-                    else:
+                    else: 
+                        # caso contrario, adicionar sua conexao UDP atrelada a sua
+                        # conexao TCP: (endereço, porta) TCP : (endereço, porta) UDP
                         self.TCPTOUDP[request.getAddress()] = clientUdpAddr
 
+                        # mensagem para o cliente
                         returnData = {}
                         returnData['message'] = '{} entrou na sala. {}/3'.format(request.getRequestData()['name'], len(usersInRoom))
                         
+                        # informacoes do jogador (posicao, velocidade, ...)
                         returnData['playerInfo'] = usersInRoom[request.getAddress()].getPlayerAsArray()
                         
+                        # informacoes de cima enviadas para cada um dos usuarios na sala
                         for address in usersInRoom:
                             response = Response(responseCode=202, returnData=returnData)
                             self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
 
+                        # caso a sala ja esteja cheia
                         if len(usersInRoom) >= 3:
+                            # mensagem de retorno para os usuarios
                             returnData = {}
                             returnData['message'] = 'Partida pronta. {}/3'.format(len(usersInRoom))
-                            returnData['players'] = []
+
+                            # array de jogadores no campo players do dicionario
+                            returnData['players'] = [] 
+
+                            # para cada jogador na sala, sao armazenadas suas 
+                            # informacoes de partida (posicao, ...)
                             for address in usersInRoom:
                                 returnData['players'].append(usersInRoom[address].getPlayerAsArray())
+
+                            # os dados sao repassados para cada um dos jogadores
+                            # na sala
                             for address in usersInRoom:
                                 response = Response(responseCode=203, returnData=returnData)
                                 self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
