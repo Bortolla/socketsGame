@@ -13,7 +13,7 @@ class ServerUDP:
         self.udpAddressPort    = ('127.0.0.1', 20001) # (endereço, porta) servidor UDP
         self.tcpAddressPort = ('127.0.0.1', 20005)    # (endereço, porta) servidor TCP
 
-        self.bufferSize      = 1024  # tamanho max em Bytes dos dados transportados
+        self.bufferSize      = 1024  # tamanho max em Bytes dos dados recebidos/enviados
 
         self.allRooms        = {}    # dicionaria de todas as salas
 
@@ -294,54 +294,75 @@ class ServerUDP:
 
     # metodo que manipula as conexoes UDP
     def handleUDPRequest(self, request):
-        requestData = request.getRequestData()
-        requestData['tcpAddress'] = (requestData['tcpAddress'][0], requestData['tcpAddress'][1])
+        requestData = request.getRequestData() # dados da requisicao
 
-        # User is already in a room
+        requestData['tcpAddress'] = (requestData['tcpAddress'][0], requestData['tcpAddress'][1]) # (endereço, porta) UDP do cliente
+
+        # Requisicao com codigo 102 eh quando o usuario ja esta em uma sala
+        # e deseja atualizar as informacoes da partida (posicao, ...)
         if request.getRequestCode() == 102:
-            token = request.getToken()
-            usersInRoom = self.getRoomUsers(token=token)
-            roomWinners = self.getRoomWinners(token=token)
+            token = request.getToken()                      # token da sala
+            usersInRoom = self.getRoomUsers(token=token)    # jogadores da sala
+            roomWinners = self.getRoomWinners(token=token)  # vencedores da partida
 
+            # se getRoomUsers retorna um erro, enviar msg de erro para cliente
             if not usersInRoom:
                 print('1')
                 response = Response(responseCode=400)
                 self.sendReponseWithUDP(response, self.fromTcpToUdp(requestData['tcpAddress']))
+            
+            # se o usuario nao estiver na sala, enviar mensagem de erro
             elif not (requestData['tcpAddress'] in usersInRoom):
                 print(requestData['tcpAddress'])
                 print('2')
                 response = Response(responseCode=400)
                 self.sendReponseWithUDP(response, self.fromTcpToUdp(requestData['tcpAddress']))
+
+            # se o cliente estiver entre os vencedores,
+            # enviar mensagem de vitoria e sua posicao ao finalizar a corrida
             elif requestData['tcpAddress'] in roomWinners:
                 returnData = 'Voce ficou em {} lugar'.format(roomWinners.index(requestData['tcpAddress']) + 1)
+                
                 response = Response(responseCode=207, returnData=returnData)
                 self.sendReponseWithUDP(response, self.fromTcpToUdp(requestData['tcpAddress']))
+
+            # se o usuario apertou a tecla 'a', significa que ele deu um passo
+            # para frente
             elif requestData['pressedKey'] == 'a':
+                # para cada jogador na sala, procurar qual jogador se movimentou
+                # com base no seu id e o endereco tcp enviado, e quando for encontrado
                 for player in usersInRoom:
                     if usersInRoom[player].getPlayerId() == requestData['tcpAddress']:
-                        playerObject = usersInRoom[player]
+                        playerObject = usersInRoom[player] # armazenar sua instancia
                         break
 
-                playerObject.incrementY()
+                playerObject.incrementY() # e incrementar sua posicao em 1 valor
 
+                # se o usuario terminou o mapa 6, entao ele chegou ao fim,
+                # entao adiciona-lo aos vencedores, e enviar mensagem de vitoria
                 if playerObject.getMap() >= 6:
                     roomWinners.append(requestData['tcpAddress'])
                     returnData = '{} ficou em {} lugar'.format(requestData['name'], roomWinners.index(requestData['tcpAddress']) + 1)
                     response = Response(responseCode=206, returnData=returnData)
-                else:
+                else: # senao, enviar resposta com a posicao atualziada
                     returnData = playerObject.getPlayerAsArray()
                     response = Response(responseCode=205, returnData=returnData)
 
+                # Enviando a resposta com as informacoes atualizadas para todos
+                # os clientes na sala
                 for user in usersInRoom:
-                    # Sending a reply to client
                     self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
                 
+                # se a sala ja tem 3 vencedores (mesmo numero max/min de jogadores),
+                # entao todos chegaram ao fim, logo, a partida acabou
                 if len(roomWinners) >= 3:
-                    self.allRooms.pop(token)
-                    for user in usersInRoom:
+                    self.allRooms.pop(token) # retirar o token das salas listadas
+                    for user in usersInRoom: # enviar resposta para todos
                         returnData = 'A partida acabou'
                         response = Response(responseCode=210, returnData=returnData)
                         self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
+            
+            # enviar mensagem de erro
             else:
                 print('3')
                 response = Response(responseCode=400)

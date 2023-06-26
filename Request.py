@@ -32,26 +32,32 @@ class Request:
         # se um campo X estiver no dicionario, entao eh passado o seu valor
         # como atributo na instancia da classe Request, 
         # caso contrario, eh atribuido o valor None
+
+        # ação que o cliente deseja fazer
         if 'requestCode' in array:
             requestCode = array['requestCode']
         else:
             requestCode = None
         
+        # token da sala
         if 'token' in array:
             token = array['token']
         else:
             token = None
         
+        # dados do corpo da requisicao
         if 'requestData' in array:
             requestData = array['requestData']
         else:
             requestData = None
         
+        # endereco do cliente
         if 'address' in array:
             address = array['address']
         else:
             address = None
         
+        # conexao do cliente
         if 'connection' in array:
             connection = array['connection']
         else:
