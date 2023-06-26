@@ -76,6 +76,9 @@ while stop != True:
 
                 # Match is ready
                 elif response.getResponseCode() == 203:
+                    print('Digite aqui')
+                    
+                    
                     responseData = response.getReturnData()
 
                     # List to append the other players objects

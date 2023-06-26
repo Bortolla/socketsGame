@@ -1,8 +1,9 @@
-import os
-import pygame
-from   pygame.locals import *
-import pygame.freetype
+import os                       # biblioteca do sistema operacional
+import pygame                   # biblioteca pygame
+from   pygame.locals import *   # biblioteca pygame
+import pygame.freetype          # biblioteca pygame
 
+# classe responsavel por fazer os desenhos na tela
 class PyGameClass:
     def __init__(self) -> None:
         self.screenWidth = 850
@@ -33,7 +34,7 @@ class PyGameClass:
         text_rect.center = (playerObject.getX() + 18, playerObject.getY() - 15)
         self.screen.blit(text_surface, text_rect)
 
-        player_image = pygame.image.load('./images/spaceship.PNG')
+        player_image = pygame.image.load('./images/spaceship.png')
         player_image = pygame.transform.scale(player_image, (self.playerWidth, self.playerHeight))
         player_rect = player_image.get_rect()
         player_rect.topleft = (playerObject.getX(), playerObject.getY())
