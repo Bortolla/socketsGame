@@ -13,6 +13,20 @@ stop = False
 returnToMenu = False
 pygameQuit = False
 
+colors = {
+            'green': '\033[92m',
+            'blue': '\033[94m',
+            'black': "\u001b[40m",
+            'red': "\u001b[41m",
+            'green': "\u001b[42m",
+            'yellow': "\u001b[43m",
+            'blue': "\u001b[44m",
+            'magenta': "\u001b[45m",
+            'cyan': "\u001b[46m",
+            'white': "\u001b[47m",
+            "ENDC": '\033[0m'
+        }
+
 while stop != True:
     print('MENU: 1. Criar sala \n2. Listar salas \n3. Entrar em uma sala')
     action = str(input('-> ')).strip()
@@ -149,18 +163,27 @@ while stop != True:
                         if not ClientUDPClass.getQueue().empty():
                             # Getting the next response from server
                             response = ClientUDPClass.getQueue().get()
-                            
+
                             # Code 206: player just got to the finish line
                             if response.getResponseCode() == 206:
                                 messagesList.append(response.getReturnData())
-                                print(response.getReturnData())
+                                print(f'{colors["red"]}{response.getReturnData()}{colors["ENDC"]}')
+
+                            # Code 299: someone just sent a message
+                            elif response.getResponseCode() == 299:
+                                userResponse = response.getResponseAsArray()['returnData']
+                                print(f'\n{colors["black"]}{userResponse}{colors["ENDC"]}')
+                                
                             # Code 207: player already got to the finish line
                             elif response.getResponseCode() == 207:
-                                print(response.getReturnData())
+                                pass
+                                #print(response.getReturnData())
+
                             # Code 210: match finished
                             elif response.getResponseCode() == 210:
                                 messagesList.append(response.getReturnData())
-                                print(response.getReturnData())
+                                print(f'\n{colors["green"]}{response.getReturnData()}{colors["ENDC"]}')
+
                             # Code 205: player is in match
                             elif response.getResponseCode() == 205:
                                 # The responseData here is the new position of one of the players
@@ -175,6 +198,7 @@ while stop != True:
                                     player1 = playerNewInfo
                                 elif player2.getPlayerId() == playerNewInfo.getPlayerId():
                                     player2 = playerNewInfo
+
                             else:
                                 print('Algo deu errado')
 

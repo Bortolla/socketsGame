@@ -35,6 +35,19 @@ class ClientUDP:
         # Hash aleatoria que representa o endereço do cliente
         self.addressToken      = secrets.token_hex(nbytes=16)  
 
+        self.colors = {
+            'green': '\033[92m',
+            'black': "\u001b[40m",
+            'red': "\u001b[41m",
+            'green': "\u001b[42m",
+            'yellow': "\u001b[43m",
+            'blue': "\u001b[44m",
+            'magenta': "\u001b[45m",
+            'cyan': "\u001b[46m",
+            'white': "\u001b[47m",
+            "ENDC": '\033[0m'
+        }
+
     # faz uma requisicao TCP para o servidor
     def sendRequestWithTCP(self, request):
         # verifica se o cliente tem uma conexao ativa com o cliente 
@@ -88,15 +101,10 @@ class ClientUDP:
     # Fica ouvindo pelas respostas UDP do servidor
     def getResponses(self):
         while True:
-            udpResponse = self.getUDPReponse()
-            tcpResponse = self.getTCPResponse()
+            response = self.getUDPReponse()
 
-            # Adiciona a resposta do servidor a fila de respostas
-            if udpResponse:                   
-                self.sharedQueue.put(udpResponse)
-
-            if tcpResponse:
-                self.handleTCPResponse(tcpResponse)
+            if response:                   
+                self.sharedQueue.put(response)
     
     def handleTCPResponse(self, tcpResponse):
         print('CHEGOU AQUI')
@@ -146,18 +154,18 @@ class ClientUDP:
     
     def handleUserInput(self, userName):
         while True:
-            userInput = input('Digite sua mensagem: ')
-            print(f'msg:\n{userName}: {userInput}')
+            userInput = input('')
             
             requestData = {}
             requestData['name'] = userName
             requestData['message'] = userInput
 
             request = Request(requestCode=199, token=self.currentRoom,requestData=requestData)
-            self.sendRequestWithTCP(request=request)
+            self.sendRequestWithUDP(request=request)
 
     def getUserMessage(self, userName):
-        print('\n=x=x=x=x= Bem-vindo ao chat! =x=x=x=x=\n')
+        print(f'\n{self.colors["blue"]}=x=x=x=x= Bem-vindo ao chat! =x=x=x=x={self.colors["ENDC"]}\n')
+        print('Para você enviar uma mensagem aos outros jogadores basta digitar sua mensagem no terminal e apertar a tecla ENTER.\nBoa sorte!\n')
         
         inputThread = threading.Thread(target=self.handleUserInput, args=(userName,))
         inputThread.start()

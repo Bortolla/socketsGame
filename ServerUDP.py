@@ -239,7 +239,7 @@ class ServerUDP:
                     # envia resposta de sucesso com todas as salas
                     response = Response(responseCode=200, returnData=returnData)
                     self.sendReponseWithTCP(response, request.getConnection())
-                
+
                 # requisicao codigo 101 usuario entra em uma sala
                 elif request.getRequestCode() == 101:
                     token = request.getToken() # pega o token enviado na requisicao
@@ -291,38 +291,6 @@ class ServerUDP:
                             for address in usersInRoom:
                                 response = Response(responseCode=203, returnData=returnData)
                                 self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
-
-                # enviar mensagem para os usuarios da sala
-                elif request.getRequestCode() == 199:
-                    requestData = request.getRequestAsArray()
-                    messageData = requestData['requestData']
-
-                    print(f"{messageData['name']}: {messageData['message']}")
-
-                    print(f'requestData:\n{requestData}')
-                    print(f'\nmessageData:\n{messageData}')
-                    
-                    roomToken = requestData['token']
-                    usersInRoom = self.getRoomUsers(roomToken)
-
-                    #print(f'Usuários na sala:\n{usersInRoom}')
-
-                    returnData = f"{messageData['name']}: {messageData['message']}"
-
-                    for address in usersInRoom:
-                        response = Response(responseCode=299, returnData=returnData)
-
-                        self.sendReponseWithTCP(response, usersInRoom[address].getConnection())
-                        
-                        #print(f'\nUsuário 1 na sala: {user}')
-
-
-
-                    """newRoomToken = self.createNewRoom()
-
-                    # envia resposta de sucesso com o token da sala
-                    response = Response(responseCode=201, token=newRoomToken)
-                    self.sendReponseWithTCP(response, request.getConnection())"""
 
     # metodo que manipula as conexoes UDP
     def handleUDPRequest(self, request):
@@ -398,4 +366,24 @@ class ServerUDP:
             else:
                 print('3')
                 response = Response(responseCode=400)
+                self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
+        
+        # enviar mensagem para os usuarios da sala
+        if request.getRequestCode() == 199:
+            requestData = request.getRequestAsArray()
+            messageData = requestData['requestData']
+
+            #print(f"{messageData['name']}: {messageData['message']}")
+
+            #print(f'requestData:\n{requestData}')
+            #print(f'\nmessageData:\n{messageData}')
+            
+            roomToken = requestData['token']
+            usersInRoom = self.getRoomUsers(roomToken)
+
+            returnData = f"{messageData['name']}: {messageData['message']}"
+
+            for user in usersInRoom:
+                response = Response(responseCode=299, returnData=returnData)
+
                 self.sendReponseWithUDP(response, self.fromTcpToUdp(user))
