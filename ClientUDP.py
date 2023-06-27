@@ -3,6 +3,7 @@ import json                     # biblioteca para manipulacao de JSON
 import queue                    # estrutura de dados Fila
 import secrets                  # biblioteca para criacao de hashes
 import random                   # biblioteca para criar numeros aleatorios
+import threading                # biblioteca de threads
 from   Request       import *   # classe request
 from   Response      import *   # classe response
 from   pygame.locals import *   # variaveis do Pygame
@@ -88,9 +89,23 @@ class ClientUDP:
     def getResponses(self):
         while True:
             udpResponse = self.getUDPReponse()
+            tcpResponse = self.getTCPResponse()
+
             # Adiciona a resposta do servidor a fila de respostas
             if udpResponse:                   
                 self.sharedQueue.put(udpResponse)
+
+            if tcpResponse:
+                self.handleTCPResponse(tcpResponse)
+    
+    def handleTCPResponse(self, tcpResponse):
+        print('CHEGOU AQUI')
+        responseCode = tcpResponse.getResponseCode()
+        responseData = tcpResponse.getReturnData()
+
+        if responseCode == 299:
+            print(f'response:\n{responseData}')
+            #print(f"{responseData['name']}: {responseData['message']}")
 
     # Pega a primeira resposta da fila
     def getQueue(self):
@@ -129,13 +144,10 @@ class ClientUDP:
         # Aguarda e retorna a resposta
         return self.getTCPResponse()
     
-    def getUserMessage(self, userName):
-        print('\n=x=x=x=x= Bem-vindo ao chat! =x=x=x=x=\n')
-        userInput = ''
-
+    def handleUserInput(self, userName):
         while True:
             userInput = input('Digite sua mensagem: ')
-            #print(f'{userName}: {userInput}')
+            print(f'msg:\n{userName}: {userInput}')
             
             requestData = {}
             requestData['name'] = userName
@@ -143,3 +155,9 @@ class ClientUDP:
 
             request = Request(requestCode=199, token=self.currentRoom,requestData=requestData)
             self.sendRequestWithTCP(request=request)
+
+    def getUserMessage(self, userName):
+        print('\n=x=x=x=x= Bem-vindo ao chat! =x=x=x=x=\n')
+        
+        inputThread = threading.Thread(target=self.handleUserInput, args=(userName,))
+        inputThread.start()
